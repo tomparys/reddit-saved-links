@@ -19,11 +19,12 @@ def getSavedLinksBySubreddit(username, password):
 	saved = dict()
 	for x in submissions:
 		saved.setdefault(_getSubreddit(x), []).append(x)
-	return saved
+		
+	return sorted(saved.items(), key=lambda (a, b): -len(b))
 
 def printSavedLinksBySubreddit():
 	saved = getSavedLinksBySubreddit('gneps','enigma')
-	for subreddit, submissions in saved.items():
+	for subreddit, submissions in saved:
 		print subreddit
 		for submission in submissions:
 			print "\t", str(submission)
@@ -32,19 +33,23 @@ def htmlSavedLinksBySubreddit():
 	saved = getSavedLinksBySubreddit('gneps','enigma')
 	html = open("saved-links.html", "w")
 	
+	html.write("<html>\n<body>\n\n");
 	html.write("<h1>Saved links from Reddit sorted by subreddits</h1>\n")
-	html.write("I found a total of %s saved links in %s subreddits.\n" % (sum(len(b) for (a, b) in saved.items()), len(saved.items())))
+	html.write("I found a total of %s saved links in %s subreddits.\n\n\n" % (
+			sum(len(b) for (a, b) in saved), len(saved)))
 	
-	for subreddit, submissions in saved.items():
+	for subreddit, submissions in saved:
 		html.write("<h2>" + subreddit + "</h2>\n<ul>\n")
 		
 		for submission in submissions:
 			try:
-				html.write("\t<li><a href='%s'>%s</a>\n" % (submission.permalink, str(submission)))
+				html.write("<li><a href='%s'>%s</a>\n" % (submission.permalink, str(submission)))
 			except UnicodeEncodeError:
 				#print "UnicodeError for:", submission.permalink
-				html.write("\t<li><a href='%s'>%s</a>\n" % (submission.permalink, "Name unknown"))
+				html.write("<li><a href='%s'>%s</a>\n" % (submission.permalink, "Name unknown"))
 		html.write("</ul>\n\n\n")
+	
+	html.write("</body>\n</html>\n");
 
 	
 if __name__ == "__main__":
