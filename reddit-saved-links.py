@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
+import os
 import re
 import time
 import shelve
 from contextlib import closing
 import getpass
 import reddit
+import argparse
+import webbrowser
+
+HTML_OUTPUT_FILE = 'saved-links.html'
 
 def _getSubreddit(submission):
 	"""Returns subreddit of said submission, or "Saved comments" if it's not link to a submission but a comment."""
@@ -35,7 +40,7 @@ def printSavedLinksBySubreddit(savedLinks):
 			print "\t", str(submission)
 
 def htmlSavedLinksBySubreddit(savedLinks):
-	with open("saved-links.html", "w") as html:
+	with open(HTML_OUTPUT_FILE, "w") as html:
 		html.write("<html>\n<body>\n\n");
 		html.write("<h1>Saved links from Reddit sorted by subreddits</h1>\n")
 		html.write("I found a total of %s saved links in %s subreddits.\n\n\n" % (
@@ -56,15 +61,24 @@ def htmlSavedLinksBySubreddit(savedLinks):
 
 	
 if __name__ == "__main__":
-	with closing(shelve.open("settings.dat", writeback=True)) as settings:
-		if not settings.has_key('username') or not settings.has_key('password'):
-			settings['username'] = raw_input('Reddit username: ')
-			settings['password'] = getpass.getpass()
-
-		savedLinks = getSavedLinksBySubreddit(settings['username'], settings['password'])
+	# Let's find out what the user wants.
+	argparser = argparse.ArgumentParser(description='Reddit saved links by subreddit.')
+	argparser.add_argument('-c','--credentials', action='store_true')
+	argparser.add_argument('-r','--reload', action='store_true')
+	cmdargs = argparser.parse_args()
 	
-	if savedLinks:
-		htmlSavedLinksBySubreddit(savedLinks)
+	# Let's do our magic.
+	if not os.path.exists(HTML_OUTPUT_FILE) or cmdargs.reload or cmdargs.credentials:
+		with closing(shelve.open("settings.dat", writeback=True)) as settings:
+			if not settings.has_key('username') or not settings.has_key('password') or cmdargs.credentials:
+				settings['username'] = raw_input('Reddit username: ')
+				settings['password'] = getpass.getpass()
+
+			savedLinks = getSavedLinksBySubreddit(settings['username'], settings['password'])
+			if savedLinks:
+				htmlSavedLinksBySubreddit(savedLinks)
+	
+	webbrowser.open(HTML_OUTPUT_FILE)
 
 
 
