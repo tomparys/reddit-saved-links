@@ -1,3 +1,4 @@
 # Ignore all precompiled python files.
 *.pyc
 saved-links.html
+settings.dat

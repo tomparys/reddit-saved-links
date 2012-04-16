@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import re
 import time
+import shelve
+from contextlib import closing
+import getpass
 import reddit
 
 def _getSubreddit(submission):
@@ -13,32 +16,32 @@ def _getSubreddit(submission):
 
 def getSavedLinksBySubreddit(username, password):
 	r = reddit.Reddit(user_agent='A very timid bot of u/GNeps')
-	r.login(username, password)
-	submissions = r.get_saved_links(limit=None)
+	try:
+		r.login(username, password)
+		submissions = r.get_saved_links(limit=None)
 
-	saved = dict()
-	for x in submissions:
-		saved.setdefault(_getSubreddit(x), []).append(x)
-		
-	return sorted(saved.items(), key=lambda (a, b): -len(b))
+		saved = dict()
+		for x in submissions:
+			saved.setdefault(_getSubreddit(x), []).append(x)
+			
+		return sorted(saved.items(), key=lambda (a, b): -len(b))
+	except reddit.errors.InvalidUserPass:
+		print "Invalid username or password."
 
-def printSavedLinksBySubreddit():
-	saved = getSavedLinksBySubreddit('gneps','enigma')
-	for subreddit, submissions in saved:
+def printSavedLinksBySubreddit(savedLinks):
+	for subreddit, submissions in savedLinks:
 		print subreddit
 		for submission in submissions:
 			print "\t", str(submission)
 
-def htmlSavedLinksBySubreddit():
-	saved = getSavedLinksBySubreddit('gneps','enigma')
-	
+def htmlSavedLinksBySubreddit(savedLinks):
 	with open("saved-links.html", "w") as html:
 		html.write("<html>\n<body>\n\n");
 		html.write("<h1>Saved links from Reddit sorted by subreddits</h1>\n")
 		html.write("I found a total of %s saved links in %s subreddits.\n\n\n" % (
-				sum(len(b) for (a, b) in saved), len(saved)))
+				sum(len(b) for (a, b) in savedLinks), len(savedLinks)))
 		
-		for subreddit, submissions in saved:
+		for subreddit, submissions in savedLinks:
 			html.write("<h2>" + subreddit + "</h2>\n<ul>\n")
 			
 			for submission in submissions:
@@ -53,4 +56,18 @@ def htmlSavedLinksBySubreddit():
 
 	
 if __name__ == "__main__":
-	htmlSavedLinksBySubreddit()
+	with closing(shelve.open("settings.dat", writeback=True)) as settings:
+		if not settings.has_key('username') or not settings.has_key('password'):
+			settings['username'] = raw_input('Reddit username: ')
+			settings['password'] = getpass.getpass()
+
+		savedLinks = getSavedLinksBySubreddit(settings['username'], settings['password'])
+	
+	if savedLinks:
+		htmlSavedLinksBySubreddit(savedLinks)
+
+
+
+		
+		
+		
